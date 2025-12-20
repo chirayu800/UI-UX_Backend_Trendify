@@ -1,3 +1,4 @@
+//product
 import express from "express";
 import {
   addProduct,
