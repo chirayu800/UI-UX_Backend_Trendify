@@ -90,4 +90,71 @@ const getSingleProduct = async (req, res) => {
   }
 };
 
-export { addProduct, listProducts, removeProduct, getSingleProduct };
+// INFO: Route for updating a product
+const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.body;
+    const {
+      name,
+      description,
+      price,
+      category,
+      subCategory,
+      sizes,
+      bestSeller,
+    } = req.body;
+
+    const product = await productModel.findById(id);
+    if (!product) {
+      return res.status(404).json({ success: false, message: "Product not found" });
+    }
+
+    // Handle image updates if new images are provided
+    let imageUrls = product.image; // Keep existing images by default
+    if (req.files && (req.files.image1 || req.files.image2 || req.files.image3 || req.files.image4)) {
+      const image1 = req.files.image1 && req.files.image1[0];
+      const image2 = req.files.image2 && req.files.image2[0];
+      const image3 = req.files.image3 && req.files.image3[0];
+      const image4 = req.files.image4 && req.files.image4[0];
+
+      const productImages = [image1, image2, image3, image4].filter(
+        (image) => image !== undefined
+      );
+
+      if (productImages.length > 0) {
+        imageUrls = await Promise.all(
+          productImages.map(async (image) => {
+            let result = await cloudinary.uploader.upload(image.path, {
+              resource_type: "image",
+            });
+            return result.secure_url;
+          })
+        );
+      }
+    }
+
+    // Update product fields
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (description) updateData.description = description;
+    if (price) updateData.price = Number(price);
+    if (category) updateData.category = category;
+    if (subCategory) updateData.subCategory = subCategory;
+    if (sizes) updateData.sizes = JSON.parse(sizes);
+    if (bestSeller !== undefined) updateData.bestSeller = bestSeller === "true" || bestSeller === true;
+    if (imageUrls && imageUrls.length > 0) updateData.image = imageUrls;
+
+    const updatedProduct = await productModel.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true }
+    );
+
+    res.status(200).json({ success: true, message: "Product updated", product: updatedProduct });
+  } catch (error) {
+    console.log("Error while updating product: ", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export { addProduct, listProducts, removeProduct, getSingleProduct, updateProduct };

@@ -108,6 +108,49 @@ const removeFromCart = async (req, res) => {
 };
 
 
+// INFO: Route for clearing entire cart (admin use)
+const clearUserCart = async (req, res) => {
+  try {
+    console.log("Clear cart request body:", req.body);
+    const { userId } = req.body;
+
+    if (!userId) {
+      console.log("User ID missing in request");
+      return res.status(400).json({ success: false, message: "User ID is required" });
+    }
+
+    console.log("Looking for user with ID:", userId);
+    const user = await userModel.findById(userId);
+    
+    if (!user) {
+      console.log("User not found with ID:", userId);
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    console.log("User found, clearing cart. Previous cart:", user.cartData);
+    
+    // Clear the entire cart
+    user.cartData = {};
+    user.markModified('cartData');
+    await user.save();
+
+    console.log("Cart cleared successfully for user:", user.email);
+
+    return res.status(200).json({
+      success: true,
+      message: "User cart cleared successfully",
+      cartData: user.cartData,
+    });
+
+  } catch (error) {
+    console.error("Error clearing user cart:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || "Internal server error while clearing cart" 
+    });
+  }
+};
+
 export {
-  addToCart, getCartDetails, removeFromCart
+  addToCart, getCartDetails, removeFromCart, clearUserCart
 };
